@@ -7,19 +7,28 @@ from twisted.internet.protocol import DatagramProtocol
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineOnlyReceiver
 from twisted.internet import reactor
+import os, subprocess, time, signal
+
 
 class Eye(LineOnlyReceiver):
     def lineReceived(self, data):
-        print "lineReceived"
-        print "%s: %s" % (self.getId(), data)        
+        print "%s: %s" % (self.getId(), data)
+        if (data == "?capture"):
+            self.transport.write("!ok/r/n")
+            # self.capture_proc = subprocess.Popen("raspivid -q -n -w 720 -h 404 -fps 25 -t 100000 -o - | /root/CatEye/Respi/send %s " % self.transport.getPeer().host, shell = True, preexec_fn = os.setsid)
+            self.capture_proc = subprocess.Popen("raspivid -q -n -w 480 -h 270 -fps 20 -t 100000 -o - | /root/CatEye/Respi/send %s " % self.transport.getPeer().host, shell = True, preexec_fn = os.setsid)
+            print self.capture_proc.pid
+        elif (data == "?stop"):
+            self.transport.write("!ok/r/n")
+            if (self.capture_proc):
+                os.killpg(self.capture_proc.pid, signal.SIGTERM)
+                self.capture_proc = None
         
     def getId(self):
         return str(self.transport.getPeer())
     
     def connectionMade(self):
         print "New connection from", self.getId()
-        self.transport.write("Welcome to the chat server, %s\n" %
-            self.getId())
         self.factory.addClient(self)
         
     def connectionLost(self, reason):
