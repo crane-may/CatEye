@@ -27,6 +27,7 @@
 		7EA04D2E17D651C2004FE8B9 /* libbz2.1.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EA04D2D17D651C2004FE8B9 /* libbz2.1.0.dylib */; };
 		7EA04D3017D651CE004FE8B9 /* libiconv.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EA04D2F17D651CE004FE8B9 /* libiconv.dylib */; };
 		7EA04D3217D651D9004FE8B9 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EA04D3117D651D9004FE8B9 /* libz.dylib */; };
+		7EA91B7F17D77F000089739B /* VideoFrameBuf.m in Sources */ = {isa = PBXBuildFile; fileRef = 7EA91B7E17D77F000089739B /* VideoFrameBuf.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +56,8 @@
 		7EA04D2D17D651C2004FE8B9 /* libbz2.1.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbz2.1.0.dylib; path = usr/lib/libbz2.1.0.dylib; sourceTree = SDKROOT; };
 		7EA04D2F17D651CE004FE8B9 /* libiconv.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libiconv.dylib; path = usr/lib/libiconv.dylib; sourceTree = SDKROOT; };
 		7EA04D3117D651D9004FE8B9 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
+		7EA91B7D17D77F000089739B /* VideoFrameBuf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoFrameBuf.h; sourceTree = "<group>"; };
+		7EA91B7E17D77F000089739B /* VideoFrameBuf.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = VideoFrameBuf.m; sourceTree = "<group>"; };
 		991BA519034E4647B695BB84 /* Pods.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.xcconfig; path = Pods/Pods.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -126,6 +129,8 @@
 				7EA04D0E17D644EA004FE8B9 /* ViewController.h */,
 				7EA04D0F17D644EA004FE8B9 /* ViewController.m */,
 				7EA04D1117D644EA004FE8B9 /* ViewController.xib */,
+				7EA91B7D17D77F000089739B /* VideoFrameBuf.h */,
+				7EA91B7E17D77F000089739B /* VideoFrameBuf.m */,
 				7EA04CFD17D644EA004FE8B9 /* Supporting Files */,
 			);
 			path = CatEye;
@@ -249,6 +254,7 @@
 				7EA04D0317D644EA004FE8B9 /* main.m in Sources */,
 				7EA04D0717D644EA004FE8B9 /* AppDelegate.m in Sources */,
 				7EA04D1017D644EA004FE8B9 /* ViewController.m in Sources */,
+				7EA91B7F17D77F000089739B /* VideoFrameBuf.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
