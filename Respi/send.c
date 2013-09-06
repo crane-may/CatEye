@@ -3,6 +3,9 @@
 #include <errno.h>
 #include <stdio>
 
+struct sockaddr_in dest_addr;
+int sock;
+
 static char send_pkt[1412];
 static char read_buf[100];
 
@@ -14,8 +17,15 @@ static int pkg_seq = 0;
 
 void send_pkt(int is_finish){
     if (buf_len == 0) return;
+    int *f_seq = (int *)send_pkt;
+    int *p_seq = (int *)(send_pkt + 4);
+    int *status = (int *)(send_pkt + 8);
     
-    //TO DO
+    *f_seq = htonl(frame_seq);
+    *p_seq = htonl(pkg_seq);
+    *status = htonl( (pkg_seq ? 0 : 1) | (is_finish ? 2 : 0) );
+    
+    sendto(sock, send_pkt, buf_len + 12, 0, (const struct sockaddr*)&dest_addr, sizeof(dest_addr));
     
     pkg_seq++;
 }
@@ -51,6 +61,14 @@ void scan_read_buf(int len){
 }
 
 int main(){
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	
+	dest_addr.sin_family=AF_INET;
+	dest_addr.sin_port = htons(6666);
+	dest_addr.sin_addr.s_addr = inet_addr("192.168.119.107");
+	bzero(&(dest_addr.sin_zero),8);
+    
+    
     while (1){
         int n = fread(read_buf,1,100,stdin);
         if (!n) {
