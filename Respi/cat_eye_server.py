@@ -1,6 +1,7 @@
 #coding=utf-8
 #!/user/bin/env python
 # twistedchatserver.py 22:13 2007-9-28 zhangsk
+from uuid import getnode as get_mac
 import time
 from twisted.internet.protocol import DatagramProtocol
 from twisted.internet.protocol import Factory
@@ -55,8 +56,7 @@ class Discover(DatagramProtocol):
         now = time.localtime(time.time())  
         timeStr = str(time.strftime("%y/%m/%d %H:%M:%S",now)) 
         print "received %r from %s:%d at %s" % (data, host, port, timeStr)
-        self.transport.write(str("12121"), (host, port))
-
+        self.transport.write(str("!me@%s"%get_mac()), (host, 9527))
 
 
 reactor.listenMulticast(9527, Discover(), listenMultiple=True)

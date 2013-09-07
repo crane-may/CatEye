@@ -7,13 +7,23 @@
 //
 
 #import "ViewController.h"
-#import "GCDAsyncUdpSocket.h"
 #import "VideoFrameBuf.h"
+#import "FFmpeg.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#import <AdSupport/ASIdentifierManager.h>
+
 
 @interface ViewController ()
-@property (strong, nonatomic) GCDAsyncUdpSocket *udpSocket;
-@property int frame_count;
+@property (strong, nonatomic) GCDAsyncUdpSocket *discoverSocket;
+@property (strong, nonatomic) GCDAsyncUdpSocket *captureSocket;
+@property (strong, nonatomic) GCDAsyncSocket *connSocket;
+@property (strong, nonatomic) FFmpeg *ffmpeg;
+@property (strong, atomic) NSMutableArray *eyes;
 
+@property BOOL is_capturing;
+@property int frame_count;
 @end
 
 @implementation ViewController
@@ -21,176 +31,169 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    [self initffmpeg];
+    _ffmpeg = [[FFmpeg alloc] init];
+    _ffmpeg.view = self;
+    [_ffmpeg initffmpeg];
+    _is_capturing = NO;
     
-    _frame_count = 0;
-    _udpSocket = [[GCDAsyncUdpSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
-    
-    init_video_buf();
+    _searchTable.delegate = self;
+    _searchTable.dataSource = self;
+    _eyes = [[NSMutableArray alloc] init];
     
     NSError *error = nil;
-    int port = 6666;
-    if (![_udpSocket bindToPort:port error:&error]){
-        NSLog(@"Error starting server (bind): %@", error);
-        return;
+    _discoverSocket = [[GCDAsyncUdpSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+    int port = 9527;
+    if (![_discoverSocket bindToPort:port error:&error]){
+        NSLog(@"Error starting server (bind): %@", error);return;
     }
-    if (![_udpSocket beginReceiving:&error]) {
-        [_udpSocket close];
-        NSLog(@"Error starting server (recv): %@", error);
-        return;
+    if (![_discoverSocket beginReceiving:&error]) {
+        [_discoverSocket close];
+        NSLog(@"Error starting server (recv): %@", error);return;
     }
+    
+    [self send_searching];
+}
 
-    [NSTimer scheduledTimerWithTimeInterval:1.0/60
-									 target:self
-								   selector:@selector(tryDraw)
-								   userInfo:nil
-									repeats:YES];
+-(NSString *)thisName{
+    return [[[ASIdentifierManager sharedManager] advertisingIdentifier] UUIDString];
+}
+
+-(void)send_searching
+{
+    int fd, err;
+    struct sockaddr_in  addr;
+    NSData *            data;
+    static const int    kOne = 1;
+    
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) { NSLog(@"can't create socket");return;}
+    err = setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &kOne, sizeof(kOne));
+    if (err != 0) { NSLog(@"can't open socket");return;}
+    
+    data = [[NSString stringWithFormat:@"?eye@%@", [self thisName]] dataUsingEncoding:NSUTF8StringEncoding];
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_len = sizeof(addr);
+    addr.sin_port = htons(9527);
+    addr.sin_addr.s_addr = htonl(0xffffffff);  // 255.255.255.255
+    
+    sendto(fd, [data bytes], [data length], 0, (const struct sockaddr *) &addr, sizeof(addr));
+    close(fd);
+    
+    [self performSelector:@selector(searchOver) withObject:self afterDelay:3];
+    [_searchLoading startAnimating];
 }
 
 
--(void)tryDraw
-{
-    VideoFrame *fme = get_frame();
-    if (fme) {
-        if (_frame_count < 10) {
-            NSLog(@"%d %@",_frame_count, [NSData dataWithBytesNoCopy:fme->data length:fme->data_len]);
-        }
-        NSLog(@"%d",_frame_count);
-        _frame_count++;
-
-        [self decodeAndShow:fme->data length:fme->data_len andTimeStamp:0];
+-(void)searchOver{
+    if (_eyes.count > 0) {
+        [_searchTable reloadSections:[NSIndexSet indexSetWithIndex:0] withRowAnimation:UITableViewRowAnimationBottom];
+        [_searchLoading stopAnimating];
+        _searchLable.text = [NSString stringWithFormat:@"Found %d eyes:", _eyes.count];
+    }else{
+        [self send_searching];
     }
 }
 
 - (void)udpSocket:(GCDAsyncUdpSocket *)sock didReceiveData:(NSData *)data fromAddress:(NSData *)address withFilterContext:(id)filterContext
 {
-    insert_data(data);
-}
-
-///////////////////////
-
--(void)initffmpeg
-{
-    AVCodec *pCodec;
-    
-    av_register_all();
-    av_init_packet(&packet);
-    pCodec=avcodec_find_decoder(CODEC_ID_H264);
-    if(pCodec==NULL)
-        goto initError; // Codec not found
-    
-    pCodecCtx = avcodec_alloc_context3(pCodec);
-    // Open codec
-    if(avcodec_open2(pCodecCtx, pCodec,NULL) < 0)
-        goto initError; // Could not open codec
-    
-    
-    pFrame = avcodec_alloc_frame();
-    
-    NSLog(@"init success");
-    return;
-    
-initError:
-    //error action
-    NSLog(@"init failed");
-    return ;
-}
-
--(void)releaseFFMPEG
-{
-    // Free scaler
-    sws_freeContext(img_convert_ctx);
-    
-    // Free RGB picture
-    avpicture_free(&picture);
-    
-    // Free the YUV frame
-    av_free(pFrame);
-    
-    // Close the codec
-    if (pCodecCtx) avcodec_close(pCodecCtx);
-}
-
--(void)setupScaler {
-    
-    // Release old picture and scaler
-    avpicture_free(&picture);
-    sws_freeContext(img_convert_ctx);
-    
-    // Allocate RGB picture
-    avpicture_alloc(&picture, PIX_FMT_RGB24,pCodecCtx->width,pCodecCtx->height);
-    
-    // Setup scaler
-    static int sws_flags =  SWS_FAST_BILINEAR;
-    img_convert_ctx = sws_getContext(pCodecCtx->width,
-                                     pCodecCtx->height,
-                                     pCodecCtx->pix_fmt,
-                                     pCodecCtx->width,
-                                     pCodecCtx->height,
-                                     PIX_FMT_RGB24,
-                                     sws_flags, NULL, NULL, NULL);
-    
-}
-
--(void)convertFrameToRGB
-{
-    [self setupScaler];
-    sws_scale (img_convert_ctx, (const uint8_t *const *)(pFrame->data), pFrame->linesize,
-               0, pCodecCtx->height,
-               picture.data, picture.linesize);
-}
-
-
--(void)decodeAndShow : (char*) buf length:(int)len andTimeStamp:(unsigned long)ulTime
-{
-    packet.size = len;
-    packet.data = (unsigned char *)buf;
-    int got_picture_ptr=0;
-    int nImageSize;
-    nImageSize = avcodec_decode_video2(pCodecCtx,pFrame,&got_picture_ptr,&packet);
-    NSLog(@"nImageSize:%d--got_picture_ptr:%d",nImageSize,got_picture_ptr);
-    
-    if (nImageSize > 0 )
-    {
-        if (pFrame->data[0])
-        {
-            [self convertFrameToRGB];
-            int nWidth = pCodecCtx->width;
-            int nHeight = pCodecCtx->height;
-            CGBitmapInfo bitmapInfo = kCGBitmapByteOrderDefault;
-            CFDataRef data = CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, picture.data[0], nWidth*nHeight*3,kCFAllocatorNull);
-            CGDataProviderRef provider = CGDataProviderCreateWithCFData(data);
-            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    if (sock == _discoverSocket) {
+        NSString *stringdata = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        if (! [stringdata hasSuffix:[NSString stringWithFormat:@"@%@", [self thisName]]]) {
+            struct sockaddr_storage sa;
+            socklen_t salen = sizeof(sa);
+            [address getBytes:&sa length:salen];
             
-            CGImageRef cgImage = CGImageCreate(nWidth,
-                                               nHeight,
-                                               8,
-                                               24,
-                                               nWidth*3,
-                                               colorSpace,
-                                               bitmapInfo,
-                                               provider,
-                                               NULL,
-                                               YES,
-                                               kCGRenderingIntentDefault);
-            CGColorSpaceRelease(colorSpace);
-            //UIImage *image = [UIImage imageWithCGImage:cgImage];
-            UIImage* image = [[UIImage alloc]initWithCGImage:cgImage];   //crespo modify 20111020
-            CGImageRelease(cgImage);
-            CGDataProviderRelease(provider);
-            CFRelease(data);
-            // [self timeIntervalControl:ulTime]; //add 0228
-            [self performSelectorOnMainThread:@selector(showImage:) withObject:image waitUntilDone:YES];
+            char host[NI_MAXHOST];
+            getnameinfo((struct sockaddr *)&sa, salen, host, sizeof(host), NULL, 0, NI_NUMERICHOST);
+            NSString *ipAddress = [[NSString alloc] initWithBytes:host length:strlen(host) encoding:NSUTF8StringEncoding];
+            NSLog(@"%@ - %@", stringdata, ipAddress);
+            
+            [_eyes addObject:ipAddress];
         }
     }
-    return;
+    //    insert_data(data);
 }
 
--(void)showImage:(UIImage *)img
+
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 1; }
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {return _eyes.count;};
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath { return 64; }
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    _outputImage.image = img;
+    static NSString *CellIdentifier = @"Cell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
+    if (cell == nil) cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
+    
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    cell.textLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:16];
+    cell.contentView.backgroundColor = [UIColor colorWithWhite:0.16 alpha:1.0f];
+    cell.textLabel.textColor = [UIColor colorWithRed:143.0f/255.0f green:158.0f/255.0f blue:139.0f/255.0f alpha:1.0f];
+    cell.textLabel.text = [_eyes objectAtIndex:indexPath.row];
+    return cell;
 }
 
+-(void)eyeView
+{
+    [self.view exchangeSubviewAtIndex:0 withSubviewAtIndex:1];
+    [UIView beginAnimations:@"animation" context:nil];
+    [UIView setAnimationDuration:1.0f];
+    [UIView setAnimationCurve:UIViewAnimationCurveEaseInOut];
+    [UIView setAnimationTransition:UIViewAnimationTransitionFlipFromRight forView:self.view cache:YES];
+    [UIView commitAnimations];
+    
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    [self connect_eye:[_eyes objectAtIndex:indexPath.row]];
+}
+
+-(void)connect_eye:(NSString *)addr
+{
+    _connSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+    NSError *err = nil;
+    
+    if(![_connSocket connectToHost:addr onPort:9528 error:&err]){
+        NSLog(@"Error: %@", err);
+    }
+}
+
+-(void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
+{
+    NSLog(@"did read data");
+}
+
+-(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
+{
+    NSLog(@"did connect");
+    [self performSelectorInBackground:@selector(eyeView) withObject:nil];
+}
+
+-(void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err
+{
+    NSLog(@"did disconnect");
+}
+
+- (IBAction)do_play:(id)sender {
+}
+
+-(void)start_capture{
+    _frame_count = 0;
+    init_video_buf();
+    [NSTimer scheduledTimerWithTimeInterval:1.0/60 target:self selector:@selector(tryDraw) userInfo:nil repeats:YES];
+}
+
+-(void)tryDraw
+{
+    VideoFrame *fme = get_frame();
+    if (fme) {
+        NSLog(@"%d",_frame_count++);
+        [_ffmpeg decodeAndShow:fme->data length:fme->data_len];
+    }
+}
 
 
 @end

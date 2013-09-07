@@ -7,23 +7,18 @@
 //
 
 #import <UIKit/UIKit.h>
-#include "libavformat/avformat.h"
-#include "libswscale/swscale.h"
+#import "GCDAsyncUdpSocket.h"
+#import "GCDAsyncSocket.h"
 
-@interface ViewController : UIViewController{
-	AVFormatContext *pFormatCtx;
-	AVCodecContext *pCodecCtx;
-    AVFrame *pFrame;
-    AVPacket packet;
-	AVPicture picture;
-	int videoStream;
-	struct SwsContext *img_convert_ctx;
-	int sourceWidth, sourceHeight;
-	int outputWidth, outputHeight;
-	UIImage *currentImage;
-	double duration;
-    double currentTime;
-}
+@interface ViewController : UIViewController <UITableViewDelegate, UITableViewDataSource, GCDAsyncSocketDelegate, GCDAsyncUdpSocketDelegate>
+
+@property (weak, nonatomic) IBOutlet UIView *searchView;
+@property (weak, nonatomic) IBOutlet UILabel *searchLable;
+@property (weak, nonatomic) IBOutlet UITableView *searchTable;
+@property (weak, nonatomic) IBOutlet UIActivityIndicatorView *searchLoading;
+
+@property (weak, nonatomic) IBOutlet UIView *captureView;
+@property (weak, nonatomic) IBOutlet UIButton *captureButton;
 @property (weak, nonatomic) IBOutlet UIImageView *outputImage;
 
 @end
