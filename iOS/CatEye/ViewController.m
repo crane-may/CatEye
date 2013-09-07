@@ -8,15 +8,10 @@
 
 #import "ViewController.h"
 #import "GCDAsyncUdpSocket.h"
-
-static char _buffer[15*1024*1024];
+#import "VideoFrameBuf.h"
 
 @interface ViewController ()
 @property (strong, nonatomic) GCDAsyncUdpSocket *udpSocket;
-@property int receive_count;
-@property int buf_len;
-@property int start_index;
-@property int end_index;
 @property int frame_count;
 
 @end
@@ -26,14 +21,15 @@ static char _buffer[15*1024*1024];
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    
     [self initffmpeg];
     
     _frame_count = 0;
-    _receive_count = 0;
     _udpSocket = [[GCDAsyncUdpSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+    
+    init_video_buf();
+    
     NSError *error = nil;
-    int port = 1234;
+    int port = 6666;
     if (![_udpSocket bindToPort:port error:&error]){
         NSLog(@"Error starting server (bind): %@", error);
         return;
@@ -43,8 +39,8 @@ static char _buffer[15*1024*1024];
         NSLog(@"Error starting server (recv): %@", error);
         return;
     }
-    
-    [NSTimer scheduledTimerWithTimeInterval:1.0/26
+
+    [NSTimer scheduledTimerWithTimeInterval:1.0/60
 									 target:self
 								   selector:@selector(tryDraw)
 								   userInfo:nil
@@ -54,44 +50,21 @@ static char _buffer[15*1024*1024];
 
 -(void)tryDraw
 {
-    if (_buf_len < _end_index + 4) return;
-    
-    while (_buf_len > _end_index + 4 &&
-           !(_buffer[_end_index] == 0 && _buffer[_end_index+1] == 0 && _buffer[_end_index+2] == 0 && _buffer[_end_index+3] == 1) ) {
-        _end_index++;
-    }
-    
-    if (_buf_len > _end_index + 4) {
-        NSLog(@"frame: %d, pos: %d, len: %d",_frame_count, _start_index, _end_index - _start_index);
-        [self decodeAndShow:_buffer + _start_index length:_end_index - _start_index andTimeStamp:0];
-        
-        _start_index = _end_index;
-        _end_index++;
+    VideoFrame *fme = get_frame();
+    if (fme) {
+        if (_frame_count < 10) {
+            NSLog(@"%d %@",_frame_count, [NSData dataWithBytesNoCopy:fme->data length:fme->data_len]);
+        }
+        NSLog(@"%d",_frame_count);
+        _frame_count++;
+
+        [self decodeAndShow:fme->data length:fme->data_len andTimeStamp:0];
     }
 }
 
 - (void)udpSocket:(GCDAsyncUdpSocket *)sock didReceiveData:(NSData *)data fromAddress:(NSData *)address withFilterContext:(id)filterContext
 {
-    if (_receive_count == 0 ) {
-        char tmp_buf[4];
-        [data getBytes:tmp_buf length:4];
-        
-        if (tmp_buf[0] == 0 && tmp_buf[1] == 0 && tmp_buf[2] == 0 && tmp_buf[3] == 1) {
-            _start_index = 0;
-            _end_index = 1;
-            [data getBytes:_buffer length:data.length];
-            _buf_len = data.length;
-            
-            _receive_count++;
-        }
-    }
-    else if (_receive_count > 0 && _buf_len < sizeof(_buffer)){
-        [data getBytes:_buffer + _buf_len length:data.length];
-        _buf_len += data.length;
-        _receive_count++;
-    }
-    
-    NSLog(@"%d",_receive_count);
+    insert_data(data);
 }
 
 ///////////////////////

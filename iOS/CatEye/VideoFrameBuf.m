@@ -36,7 +36,7 @@ void top_finish(){ }
 void insert_at_top(){
     @synchronized(lock){
         VideoFrame *bottom = video_bufs[VIDEOBUFLEN - 1];
-        for (int i=VIDEOBUFLEN - 1; i>0; i++) {
+        for (int i=VIDEOBUFLEN - 1; i>0; i--) {
             video_bufs[i] = video_bufs[i-1];
         }
         video_bufs[0] = bottom;
@@ -63,7 +63,7 @@ void insert_data(NSData *data){
     
     if (frame_seq == top->frame_seq) {
         if (top->pkg_count == pkg_seq) {
-            [data getBytes:top->data range:NSMakeRange(12, data.length - 12)];
+            [data getBytes:top->data + top->data_len range:NSMakeRange(12, data.length - 12)];
             top->pkg_count++;
             top->data_len += ([data length] - 12);
             
@@ -78,9 +78,11 @@ void insert_data(NSData *data){
 VideoFrame *get_frame(){
     VideoFrame *ret = nil;
     @synchronized(lock){
-        for (int i=VIDEOBUFLEN - 1; i>0; i++) {
+        for (int i=VIDEOBUFLEN - 1; i>0; i--) {
             if (video_bufs[i]->isFinish) {
                 ret = video_bufs[i];
+                video_bufs[i]->isFinish = 0;
+                break;
             }
         }
     }
