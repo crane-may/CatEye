@@ -8,7 +8,7 @@
 
 #import "VideoFrameBuf.h"
 
-#define VIDEOBUFLEN 10
+#define VIDEOBUFLEN 30
 #define DROP NSLog(@"drop a frame")
 
 static VideoFrame video_bufs_real[VIDEOBUFLEN];

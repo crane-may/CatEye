@@ -14,14 +14,17 @@
 #include <netdb.h>
 #import <AdSupport/ASIdentifierManager.h>
 
-
 @interface ViewController ()
 @property (strong, nonatomic) GCDAsyncUdpSocket *discoverSocket;
 @property (strong, nonatomic) GCDAsyncUdpSocket *captureSocket;
 @property (strong, nonatomic) GCDAsyncSocket *connSocket;
 @property (strong, nonatomic) FFmpeg *ffmpeg;
 @property (strong, atomic) NSMutableArray *eyes;
+@property (strong, nonatomic) NSTimer *captureTime;
 
+@property (strong, nonatomic) IBOutlet KxMovieGLView *captureKxView;
+
+@property BOOL will_exit;
 @property BOOL is_capturing;
 @property int frame_count;
 @end
@@ -31,10 +34,20 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    _ffmpeg = [[FFmpeg alloc] init];
-    _ffmpeg.view = self;
-    [_ffmpeg initffmpeg];
+    
+//    _ffmpeg = [[FFmpeg alloc] init];
+//    _ffmpeg.view = self;
+//    [_ffmpeg initffmpeg];
+    
+    
+    _captureKxView = [[KxMovieGLView alloc] initWithFrame:CGRectMake(0, 0, [[UIScreen mainScreen] applicationFrame].size.height - 66, 320)];
+    [_captureView addSubview:_captureKxView];
+    [_captureKxView setSizeWidth:480.0f height:270.0f];
+    _captureKxView.contentMode = UIViewContentModeScaleAspectFit;
+
+    
     _is_capturing = NO;
+    _will_exit = NO;
     
     _searchTable.delegate = self;
     _searchTable.dataSource = self;
@@ -112,7 +125,10 @@
             [_eyes addObject:ipAddress];
         }
     }
-    //    insert_data(data);
+    
+    if (sock == _captureSocket) {
+        insert_data(data);
+    }
 }
 
 
@@ -164,6 +180,14 @@
 -(void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag
 {
     NSLog(@"did read data");
+    if (_will_exit) {
+        exit(0);
+    }
+}
+-(void)socket:(GCDAsyncSocket *)sock didWriteDataWithTag:(long)tag
+{
+    NSLog(@"did send data");
+    
 }
 
 -(void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port
@@ -178,22 +202,61 @@
 }
 
 - (IBAction)do_play:(id)sender {
+    if (_is_capturing) {
+        [_connSocket writeData:[@"?stop\r\n" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:1];
+        [_connSocket readDataWithTimeout:-1 tag:0];
+        [self stop_capture];
+        [_captureButton setTitle:@"►" forState:UIControlStateNormal];
+        _is_capturing = NO;
+    }else{
+        [_connSocket writeData:[@"?capture\r\n" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:1];
+        [_connSocket readDataWithTimeout:-1 tag:0];
+        [self start_capture];
+        [_captureButton setTitle:@"▧" forState:UIControlStateNormal];
+        _is_capturing = YES;
+    }
 }
 
 -(void)start_capture{
     _frame_count = 0;
     init_video_buf();
-    [NSTimer scheduledTimerWithTimeInterval:1.0/60 target:self selector:@selector(tryDraw) userInfo:nil repeats:YES];
+    _captureSocket = [[GCDAsyncUdpSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+    int port = 9529;
+    NSError *error = nil;
+    if (![_captureSocket bindToPort:port error:&error]){
+        NSLog(@"Error starting server (bind): %@", error);return;
+    }
+    if (![_captureSocket beginReceiving:&error]) {
+        [_captureSocket close];
+        NSLog(@"Error starting server (recv): %@", error);return;
+    }
+
+    _captureTime = [NSTimer scheduledTimerWithTimeInterval:1.0/60 target:self selector:@selector(tryDraw) userInfo:nil repeats:YES];
+}
+
+-(void)stop_capture{
+    [_captureTime invalidate];
+    [_captureSocket close];
 }
 
 -(void)tryDraw
 {
     VideoFrame *fme = get_frame();
     if (fme) {
-        NSLog(@"%d",_frame_count++);
-        [_ffmpeg decodeAndShow:fme->data length:fme->data_len];
+//        NSLog(@"%d",_frame_count++);
+//        [_ffmpeg decodeAndShow:fme->data length:fme->data_len];
+        [_captureKxView render:fme->data length:fme->data_len];
     }
 }
 
+-(void)exit
+{
+    if (_is_capturing) {
+        [_connSocket writeData:[@"?stop\r\n" dataUsingEncoding:NSUTF8StringEncoding] withTimeout:-1 tag:1];
+        [_connSocket readDataWithTimeout:-1 tag:0];
+        [self stop_capture];
+        _will_exit = YES;
+    }
+}
 
 @end

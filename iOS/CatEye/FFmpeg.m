@@ -90,7 +90,7 @@ initError:
     int got_picture_ptr=0;
     int nImageSize;
     nImageSize = avcodec_decode_video2(pCodecCtx,pFrame,&got_picture_ptr,&packet);
-    NSLog(@"nImageSize:%d--got_picture_ptr:%d",nImageSize,got_picture_ptr);
+//    NSLog(@"nImageSize:%d--got_picture_ptr:%d",nImageSize,got_picture_ptr);
     
     if (nImageSize > 0 )
     {

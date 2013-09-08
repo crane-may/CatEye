@@ -9,6 +9,7 @@
 #import <UIKit/UIKit.h>
 #import "GCDAsyncUdpSocket.h"
 #import "GCDAsyncSocket.h"
+#import "KxMovieGLView.h"
 
 @interface ViewController : UIViewController <UITableViewDelegate, UITableViewDataSource, GCDAsyncSocketDelegate, GCDAsyncUdpSocketDelegate>
 
@@ -21,4 +22,5 @@
 @property (weak, nonatomic) IBOutlet UIButton *captureButton;
 @property (weak, nonatomic) IBOutlet UIImageView *outputImage;
 
+-(void)exit;
 @end

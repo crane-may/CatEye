@@ -31,6 +31,8 @@
 		7EA3287617DB818D00B78CF3 /* AdSupport.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EA3287517DB818D00B78CF3 /* AdSupport.framework */; };
 		7EA3287817DB91F300B78CF3 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EA3287717DB91F300B78CF3 /* QuartzCore.framework */; };
 		7EA91B7F17D77F000089739B /* VideoFrameBuf.m in Sources */ = {isa = PBXBuildFile; fileRef = 7EA91B7E17D77F000089739B /* VideoFrameBuf.m */; };
+		7EFC1A0417DCDD3E00194B1E /* KxMovieGLView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7EFC1A0217DCDD3E00194B1E /* KxMovieGLView.m */; };
+		7EFC1A0617DCDD7400194B1E /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7EFC1A0517DCDD7400194B1E /* OpenGLES.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -65,6 +67,9 @@
 		7EA3287717DB91F300B78CF3 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		7EA91B7D17D77F000089739B /* VideoFrameBuf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoFrameBuf.h; sourceTree = "<group>"; };
 		7EA91B7E17D77F000089739B /* VideoFrameBuf.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = VideoFrameBuf.m; sourceTree = "<group>"; };
+		7EFC1A0217DCDD3E00194B1E /* KxMovieGLView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = KxMovieGLView.m; sourceTree = "<group>"; };
+		7EFC1A0317DCDD3E00194B1E /* KxMovieGLView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KxMovieGLView.h; sourceTree = "<group>"; };
+		7EFC1A0517DCDD7400194B1E /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		991BA519034E4647B695BB84 /* Pods.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.xcconfig; path = Pods/Pods.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -73,6 +78,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7EFC1A0617DCDD7400194B1E /* OpenGLES.framework in Frameworks */,
 				7EA3287817DB91F300B78CF3 /* QuartzCore.framework in Frameworks */,
 				7EA3287617DB818D00B78CF3 /* AdSupport.framework in Frameworks */,
 				7EA04D3217D651D9004FE8B9 /* libz.dylib in Frameworks */,
@@ -121,6 +127,7 @@
 				7EA04CF617D644EA004FE8B9 /* UIKit.framework */,
 				7EA04CF817D644EA004FE8B9 /* Foundation.framework */,
 				7EA3287517DB818D00B78CF3 /* AdSupport.framework */,
+				7EFC1A0517DCDD7400194B1E /* OpenGLES.framework */,
 				7EA04CFA17D644EA004FE8B9 /* CoreGraphics.framework */,
 				20089E837DA14C59A930C269 /* libPods.a */,
 				7EA04D2317D64E82004FE8B9 /* libavutil.a */,
@@ -144,6 +151,8 @@
 				7EA91B7E17D77F000089739B /* VideoFrameBuf.m */,
 				7EA3287217DB35A700B78CF3 /* FFmpeg.h */,
 				7EA3287317DB35A700B78CF3 /* FFmpeg.m */,
+				7EFC1A0317DCDD3E00194B1E /* KxMovieGLView.h */,
+				7EFC1A0217DCDD3E00194B1E /* KxMovieGLView.m */,
 				7EA04CFD17D644EA004FE8B9 /* Supporting Files */,
 			);
 			path = CatEye;
@@ -269,6 +278,7 @@
 				7EA04D1017D644EA004FE8B9 /* ViewController.m in Sources */,
 				7EA91B7F17D77F000089739B /* VideoFrameBuf.m in Sources */,
 				7EA3287417DB35A700B78CF3 /* FFmpeg.m in Sources */,
+				7EFC1A0417DCDD3E00194B1E /* KxMovieGLView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -354,12 +364,14 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 991BA519034E4647B695BB84 /* Pods.xcconfig */;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer: yang liu (ZBTCLWPW9U)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: yang liu (ZBTCLWPW9U)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "CatEye/CatEye-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
 					"\"${PODS_ROOT}/Headers\"",
 					"\"${PODS_ROOT}/Headers/CocoaAsyncSocket\"",
-					ffmpeg/,
+					ffmpeg/include,
 				);
 				INFOPLIST_FILE = "CatEye/CatEye-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
@@ -367,6 +379,8 @@
 					"\"$(SRCROOT)/ffmpeg/libs\"",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "29388F8E-79CB-4B88-BDE4-ACBD0B4A8B39";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "29388F8E-79CB-4B88-BDE4-ACBD0B4A8B39";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -375,12 +389,14 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 991BA519034E4647B695BB84 /* Pods.xcconfig */;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer: yang liu (ZBTCLWPW9U)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: yang liu (ZBTCLWPW9U)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "CatEye/CatEye-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
 					"\"${PODS_ROOT}/Headers\"",
 					"\"${PODS_ROOT}/Headers/CocoaAsyncSocket\"",
-					ffmpeg/,
+					ffmpeg/include,
 				);
 				INFOPLIST_FILE = "CatEye/CatEye-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
@@ -388,6 +404,8 @@
 					"\"$(SRCROOT)/ffmpeg/libs\"",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "29388F8E-79CB-4B88-BDE4-ACBD0B4A8B39";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "29388F8E-79CB-4B88-BDE4-ACBD0B4A8B39";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
