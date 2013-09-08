@@ -1,0 +1,1 @@
+ps aux | grep 'raspi\|send' | grep -v grep | gawk '{print $2}' | xargs kill

@@ -43,7 +43,7 @@ void scan_read_buf(int len){
             buf = send_pkt + 12;
             buf_len = 0;
             
-            printf("%d\n", frame_seq);
+            // printf("%d\n", frame_seq);
         }
         
         if (c != 0) {
@@ -71,12 +71,12 @@ void scan_read_buf(int len){
     }
 }
 
-int main(){
+int main(int argc, char* argv[]){
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	
 	dest_addr.sin_family=AF_INET;
-	dest_addr.sin_port = htons(6666);
-	dest_addr.sin_addr.s_addr = inet_addr("192.168.119.107");
+	dest_addr.sin_port = htons(9529);
+	dest_addr.sin_addr.s_addr = inet_addr(argv[1]);
 	bzero(&(dest_addr.sin_zero),8);
     
     
@@ -85,7 +85,7 @@ int main(){
         if (!n) {
             usleep(1000);
         }else{
-            printf(".");
+            // printf(".");
             scan_read_buf(n);
         }
     }
