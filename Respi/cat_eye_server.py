@@ -3,26 +3,46 @@
 # twistedchatserver.py 22:13 2007-9-28 zhangsk
 from uuid import getnode as get_mac
 import time
-from twisted.internet.protocol import DatagramProtocol
+from twisted.internet.protocol import DatagramProtocol, Protocol
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineOnlyReceiver
 from twisted.internet import reactor
 import os, subprocess, time, signal
 
 
-class Eye(LineOnlyReceiver):
-    def lineReceived(self, data):
+class Eye(Protocol):
+    def __init__(self, host, port):  
+        self.host = host  
+        self.port = port  
+        self.data = ""
+        self._connected = False
+        
+    def dataReceived(self, data):  
+        self.data += data
+        if self.data.endswith("\r\n"):
+            self.cmdReceived(self.data.strip("\r\n"))
+            self.data = ""
+            
+    def cmdReceived(self, data):
         print "%s: %s" % (self.getId(), data)
-        if (data == "?capture"):
-            self.transport.write("!ok/r/n")
+        if data == "?capture":
+            self.transport.write("!ok\r\n")
             # self.capture_proc = subprocess.Popen("raspivid -q -n -w 720 -h 404 -fps 25 -t 100000 -o - | /root/CatEye/Respi/send %s " % self.transport.getPeer().host, shell = True, preexec_fn = os.setsid)
             self.capture_proc = subprocess.Popen("raspivid -q -n -w 480 -h 270 -fps 20 -t 100000 -o - | /root/CatEye/Respi/send %s " % self.transport.getPeer().host, shell = True, preexec_fn = os.setsid)
             print self.capture_proc.pid
-        elif (data == "?stop"):
-            self.transport.write("!ok/r/n")
+            
+        elif data == "?stop":
+            self.transport.write("!ok\r\n")
             if (self.capture_proc):
                 os.killpg(self.capture_proc.pid, signal.SIGTERM)
                 self.capture_proc = None
+                
+        elif data == "?shot":
+            os.system("raspistill -o /dev/shm/tmp.jpg")
+            f = open("/dev/shm/tmp.jpg","rb")
+            fdata = f.read()
+            self.transport.write("!ok(%d)\r\n"%len(fdata))
+            self.transport.write(fdata)
         
     def getId(self):
         return str(self.transport.getPeer())
